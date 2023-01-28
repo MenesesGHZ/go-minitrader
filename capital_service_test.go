@@ -133,14 +133,27 @@ func TestGetPositions(t *testing.T) {
 	t.Logf("Market Details: %+v", positionsResponse)
 }
 
-func TestCreatePosition(t *testing.T) {
+func TestCreateWorkingOrder(t *testing.T) {
 	capClient, _ := testCapitalClient()
 	capClient.CreateNewSession()
 
-	positionsResponse, err := capClient.CreatePosition("USDMXN", BUY, 19.20)
+	workingOrderResponse, err := capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)
 	if err != nil {
 		fmt.Println(err)
 		t.Error()
 	}
-	t.Logf("Market Details: %+v", positionsResponse)
+	t.Logf("Market Details: %+v", workingOrderResponse)
+}
+
+func TestGetPositionOrderConfirmation(t *testing.T) {
+	capClient, _ := testCapitalClient()
+	capClient.CreateNewSession()
+
+	workingOrderResponse, _ := capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)
+	positionOrderConfirmation, err := capClient.GetPositionOrderConfirmation(workingOrderResponse.DealReference)
+	if err != nil {
+		fmt.Println(err)
+		t.Error()
+	}
+	t.Logf("Market Details: %+v", positionOrderConfirmation)
 }

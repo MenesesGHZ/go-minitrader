@@ -6,11 +6,10 @@ type NewSessionBody struct {
 	EncryptedPassword bool   `json:"encryptedPassword"`
 }
 
-type CreatePositionBody struct {
-	Epic           string    `json:"epic"`
-	Direction      Direction `json:"direction"`
-	Size           string    `json:"size"`
-	GuaranteedStop bool      `json:"guaranteedStop"`
-	StopLevel      float64   `json:"stopLevel"`
-	ProfitLevel    float64   `json:"profitLevel"`
+type CreateWorkingOrderBody struct {
+	Epic      string         `json:"epic"`
+	Direction OrderDirection `json:"direction"`
+	Type      OrderType      `json:"type"`
+	Size      float32        `json:"size"`
+	Level     float32        `json:"level"`
 }

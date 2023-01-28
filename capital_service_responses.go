@@ -175,6 +175,25 @@ type PositionsResponse struct {
 	} `json:"positions"`
 }
 
-type CreatePositionResponse struct {
+type WorkingOrderResponse struct {
 	DealReference string `json:"dealReference"`
+}
+
+type PositionOrderConfirmationResponse struct {
+	Date          string `json:"date"`
+	Status        string `json:"status"`
+	Reason        string `json:"reason"`
+	DealStatus    string `json:"dealStatus"`
+	Epic          string `json:"epic"`
+	DealRef       string `json:"dealReference"`
+	DealID        string `json:"dealId"`
+	AffectedDeals []struct {
+		ID     string `json:"dealId"`
+		Status string `json:"status"`
+	} `json:"affectedDeals"`
+	Level          float64 `json:"level"`
+	Size           int     `json:"size"`
+	Direction      string  `json:"direction"`
+	GuaranteedStop bool    `json:"guaranteedStop"`
+	TrailingStop   bool    `json:"trailingStop"`
 }

@@ -51,7 +51,7 @@ func NewCapitalClient(capitalEmail string, capitalApiKey string, capitalApiKeyPa
 }
 
 func (capClient *CapitalClientAPI) GetEncriptionKey() (EncriptionResponse, error) {
-	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/session/encryptionKey", nil)
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/session/encryptionKey", nil)
 	request.Header.Add("X-CAP-API-KEY", capClient.CAPITAL_API_KEY)
 
 	response, err := capClient.HttpClient.Do(request)
@@ -72,7 +72,7 @@ func (capClient *CapitalClientAPI) GetWatchLists() (WatchListsResponse, error) {
 		return WatchListsResponse{}, errors.New("A Session is needed; Run `capClient.CreateNewSession()` to authenticate")
 	}
 
-	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/watchlists", nil)
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/watchlists", nil)
 	response, err := capClient.HttpClient.Do(request)
 	if err != nil {
 		return WatchListsResponse{}, err
@@ -103,7 +103,7 @@ func (capClient *CapitalClientAPI) CreateNewSession() (newSessionResponse NewSes
 	}
 	jsonData, _ := json.Marshal(body)
 
-	request, _ := http.NewRequest("POST", "https://api-capital.backend-capital.com/api/v1/session", bytes.NewBuffer(jsonData))
+	request, _ := http.NewRequest("POST", capClient.CapitalDomainName+"/api/v1/session", bytes.NewBuffer(jsonData))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-CAP-API-KEY", capClient.CAPITAL_API_KEY)
 	response, err := capClient.HttpClient.Do(request)
@@ -165,7 +165,7 @@ func (capClient *CapitalClientAPI) GetAllAccounts() (AccountsResponse, error) {
 	if capClient.HttpClient.Transport == nil {
 		return AccountsResponse{}, errors.New("A Session is needed; Run `capClient.CreateNewSession()` to authenticate")
 	}
-	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/accounts", nil)
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/accounts", nil)
 	response, err := capClient.HttpClient.Do(request)
 	if err != nil {
 		return AccountsResponse{}, err
@@ -192,7 +192,7 @@ func (capClient *CapitalClientAPI) GetMarketsDetails(epics []string) (MarketsDet
 		values.Add("epics", epic)
 	}
 
-	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/markets", nil)
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/markets", nil)
 	request.URL.RawQuery = values.Encode()
 	response, err := capClient.HttpClient.Do(request)
 	if err != nil {
@@ -216,7 +216,7 @@ func (capClient *CapitalClientAPI) GetPrices(epic string, resolution string) (pr
 		return pricesResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
 	}
 
-	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/prices/"+epic, nil)
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/prices/"+epic, nil)
 	values := request.URL.Query()
 	values.Set("max", "100")
 	values.Set("resolution", resolution)
@@ -243,7 +243,7 @@ func (capClient *CapitalClientAPI) GetPositions() (positionsResponse PositionsRe
 		return positionsResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
 	}
 
-	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/positions", nil)
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/positions", nil)
 	response, err := capClient.HttpClient.Do(request)
 	if err != nil {
 		return positionsResponse, err
@@ -260,37 +260,97 @@ func (capClient *CapitalClientAPI) GetPositions() (positionsResponse PositionsRe
 	return positionsResponse, nil
 }
 
-type Direction string
+type OrderDirection string
 
 const (
-	SELL Direction = "SELL"
-	BUY  Direction = "BUY"
+	SELL OrderDirection = "SELL"
+	BUY  OrderDirection = "BUY"
 )
 
-func (capClient *CapitalClientAPI) CreatePosition(epic string, direction Direction, size float64) (createPositionResponse CreatePositionResponse, err error) {
+type OrderType string
+
+const (
+	LIMIT OrderType = "LIMIT"
+	STOP  OrderType = "STOP"
+)
+
+func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction OrderDirection, orderType OrderType, price float32, orderSize float32) (createWorkingOrder WorkingOrderResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
-		return createPositionResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return createWorkingOrder, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
 	}
 
-	body, err := json.Marshal(CreatePositionBody{
+	body, err := json.Marshal(CreateWorkingOrderBody{
 		Epic:      epic,
 		Direction: direction,
-		Size:      fmt.Sprintf("%v", size),
+		Type:      orderType,
+		Level:     price,
+		Size:      orderSize,
 	})
 	if err != nil {
-		return createPositionResponse, err
+		return createWorkingOrder, err
 	}
 
-	request, _ := http.NewRequest("POST", "https://api-capital.backend-capital.com/api/v1/positions", bytes.NewBuffer(body))
+	request, _ := http.NewRequest("POST", capClient.CapitalDomainName+"/api/v1/workingorders", bytes.NewBuffer(body))
+	request.Header.Set("Content-Type", "application/json")
 	response, err := capClient.HttpClient.Do(request)
 	if err != nil {
-		return createPositionResponse, err
+		return createWorkingOrder, err
 	}
 	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return createWorkingOrder, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
+	}
 
-	createPositionResponse = CreatePositionResponse{}
+	createWorkingOrder = WorkingOrderResponse{}
 	decoder := json.NewDecoder(response.Body)
-	decoder.Decode(&createPositionResponse)
+	decoder.Decode(&createWorkingOrder)
 
-	return createPositionResponse, nil
+	return createWorkingOrder, nil
+}
+
+func (capClient *CapitalClientAPI) GetPositionOrderConfirmation(dealReference string) (confirmation PositionOrderConfirmationResponse, err error) {
+	if capClient.HttpClient.Transport == nil {
+		return confirmation, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+	}
+
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/confirms/"+dealReference, nil)
+	response, err := capClient.HttpClient.Do(request)
+	if err != nil {
+		return confirmation, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return confirmation, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
+	}
+
+	confirmation = PositionOrderConfirmationResponse{}
+	decoder := json.NewDecoder(response.Body)
+	decoder.Decode(&confirmation)
+
+	return confirmation, nil
+}
+
+func (capClient *CapitalClientAPI) DeleteWorkingOrder(dealReference string) (deleteWorkingResponse WorkingOrderResponse, err error) {
+	if capClient.HttpClient.Transport == nil {
+		return deleteWorkingResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+	}
+
+	request, _ := http.NewRequest("DELETE", capClient.CapitalDomainName+"api/v1/workingorders/"+dealReference, nil)
+	response, err := capClient.HttpClient.Do(request)
+	if err != nil {
+		return deleteWorkingResponse, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return deleteWorkingResponse, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
+	}
+
+	deleteWorkingResponse = WorkingOrderResponse{}
+	decoder := json.NewDecoder(response.Body)
+	decoder.Decode(&deleteWorkingResponse)
+
+	return deleteWorkingResponse, nil
 }
