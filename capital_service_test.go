@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func testCapitalClient() (client *CapitalClientAPI, err error) {
+func _TestCapitalClient() (client *CapitalClientAPI, err error) {
 	err = godotenv.Load(".env")
 	if err != nil {
 		return client, err
@@ -21,7 +21,7 @@ func testCapitalClient() (client *CapitalClientAPI, err error) {
 }
 
 func TestNewCapitalClient(t *testing.T) {
-	_, err := testCapitalClient()
+	_, err := _TestCapitalClient()
 	if err != nil {
 		fmt.Println(err)
 		t.Error()
@@ -29,7 +29,7 @@ func TestNewCapitalClient(t *testing.T) {
 }
 
 func TestGetEncriptionKey(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	encription, err := capClient.GetEncriptionKey()
 	if err != nil {
 		fmt.Println(err)
@@ -42,7 +42,7 @@ func TestGetEncriptionKey(t *testing.T) {
 }
 
 func TestGetEncryptedPassword(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	encription, _ := capClient.GetEncriptionKey()
 	encryptedPassword, err := capClient.GetEncryptedPassword(encription)
 	if err != nil {
@@ -53,7 +53,7 @@ func TestGetEncryptedPassword(t *testing.T) {
 }
 
 func TestCreateNewSessionAccount(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	newSessionResponse, headerTokens, err := capClient.CreateNewSession()
 	if err != nil {
 		fmt.Println(err)
@@ -68,7 +68,7 @@ func TestCreateNewSessionAccount(t *testing.T) {
 }
 
 func TestListWatchList(t *testing.T) { // TODO FIX, probably they change the json key
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
 	watchListResponse, err := capClient.GetWatchLists()
@@ -80,7 +80,7 @@ func TestListWatchList(t *testing.T) { // TODO FIX, probably they change the jso
 }
 
 func TestGetAllAccounts(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
 	accounts, err := capClient.GetAllAccounts()
@@ -91,8 +91,8 @@ func TestGetAllAccounts(t *testing.T) {
 	t.Logf("Accounts: %+v", accounts)
 }
 
-func TestGetMarkets(t *testing.T) {
-	capClient, _ := testCapitalClient()
+func TestGetMarketsDetails(t *testing.T) {
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
 	marketsDetails, err := capClient.GetMarketsDetails([]string{"USDMXN", "EURUSD"})
@@ -107,22 +107,22 @@ func TestGetMarkets(t *testing.T) {
 }
 
 func TestGetPrices(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
-	pricesResponse, err := capClient.GetPrices("USDMXN", "MINUTE_30")
+	pricesResponse, err := capClient.GetPrices("USDMXN", MINUTE_30)
 	if err != nil {
 		fmt.Println(err)
 		t.Error()
 	}
 	if len(pricesResponse.Prices) == 0 {
-		t.Errorf("Something is wrong with the response. Probably")
+		t.Errorf("No Data Parsed. Something is wrong with the response.")
 	}
 	t.Logf("Market Details: %+v", pricesResponse)
 }
 
 func TestGetPositions(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
 	positionsResponse, err := capClient.GetPositions()
@@ -134,7 +134,7 @@ func TestGetPositions(t *testing.T) {
 }
 
 func TestCreateWorkingOrder(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
 	workingOrderResponse, err := capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)
@@ -146,7 +146,7 @@ func TestCreateWorkingOrder(t *testing.T) {
 }
 
 func TestGetPositionOrderConfirmation(t *testing.T) {
-	capClient, _ := testCapitalClient()
+	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
 	workingOrderResponse, _ := capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)

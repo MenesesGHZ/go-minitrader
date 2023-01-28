@@ -115,27 +115,29 @@ type MarketsDetailsResponse struct {
 }
 
 type PricesResponse struct {
-	Prices []struct {
-		SnapshotTime    string `json:"snapshotTime"`
-		SnapshotTimeUTC string `json:"snapshotTimeUTC"`
-		OpenPrice       struct {
-			Bid float64 `json:"bid"`
-			Ask float64 `json:"ask"`
-		} `json:"openPrice"`
-		ClosePrice struct {
-			Bid float64 `json:"bid"`
-			Ask float64 `json:"ask"`
-		} `json:"closePrice"`
-		HighPrice struct {
-			Bid float64 `json:"bid"`
-			Ask float64 `json:"ask"`
-		} `json:"highPrice"`
-		LowPrice struct {
-			Bid float64 `json:"bid"`
-			Ask float64 `json:"ask"`
-		} `json:"lowPrice"`
-		LastTradedVolume int `json:"lastTradedVolume"`
-	}
+	Prices []CapitalPrice
+}
+
+type CapitalPrice struct {
+	SnapshotTime    string `json:"snapshotTime"`
+	SnapshotTimeUTC string `json:"snapshotTimeUTC"`
+	OpenPrice       struct {
+		Bid float64 `json:"bid"`
+		Ask float64 `json:"ask"`
+	} `json:"openPrice"`
+	ClosePrice struct {
+		Bid float64 `json:"bid"`
+		Ask float64 `json:"ask"`
+	} `json:"closePrice"`
+	HighPrice struct {
+		Bid float64 `json:"bid"`
+		Ask float64 `json:"ask"`
+	} `json:"highPrice"`
+	LowPrice struct {
+		Bid float64 `json:"bid"`
+		Ask float64 `json:"ask"`
+	} `json:"lowPrice"`
+	LastTradedVolume int `json:"lastTradedVolume"`
 }
 
 type PositionsResponse struct {
