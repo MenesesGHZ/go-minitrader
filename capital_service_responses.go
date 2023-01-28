@@ -1,5 +1,7 @@
 package forexbot
 
+import "time"
+
 type WatchListsResponse struct {
 	Epics []string `json: "epics"`
 	Name  string   `json: "name"`
@@ -134,4 +136,45 @@ type PricesResponse struct {
 		} `json:"lowPrice"`
 		LastTradedVolume int `json:"lastTradedVolume"`
 	}
+}
+
+type PositionsResponse struct {
+	Positions []struct {
+		Position struct {
+			ContractSize   int       `json:"contractSize"`
+			CreatedDate    time.Time `json:"createdDate"`
+			CreatedDateUTC time.Time `json:"createdDateUTC"`
+			DealID         string    `json:"dealId"`
+			DealReference  string    `json:"dealReference"`
+			Size           int       `json:"size"`
+			Direction      string    `json:"direction"`
+			Level          float64   `json:"level"`
+			Currency       string    `json:"currency"`
+			GuaranteedStop bool      `json:"guaranteedStop,omitempty"`
+			ControlledRisk bool      `json:"controlledRisk,omitempty"`
+		} `json:"position"`
+		Market struct {
+			InstrumentName       string    `json:"instrumentName"`
+			Expiry               string    `json:"expiry"`
+			MarketStatus         string    `json:"marketStatus"`
+			Epic                 string    `json:"epic"`
+			InstrumentType       string    `json:"instrumentType"`
+			LotSize              int       `json:"lotSize"`
+			High                 float64   `json:"high"`
+			Low                  float64   `json:"low"`
+			PercentageChange     float64   `json:"percentageChange"`
+			NetChange            float64   `json:"netChange"`
+			Bid                  float64   `json:"bid"`
+			Offer                float64   `json:"offer"`
+			UpdateTime           time.Time `json:"updateTime"`
+			UpdateTimeUTC        time.Time `json:"updateTimeUTC"`
+			DelayTime            int       `json:"delayTime"`
+			StreamingPricesAvail bool      `json:"streamingPricesAvailable"`
+			ScalingFactor        int       `json:"scalingFactor"`
+		} `json:"market"`
+	} `json:"positions"`
+}
+
+type CreatePositionResponse struct {
+	DealReference string `json:"dealReference"`
 }

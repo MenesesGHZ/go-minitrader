@@ -16,7 +16,7 @@ func testCapitalClient() (client *CapitalClientAPI, err error) {
 	capitalEmail := os.Getenv("CAPITAL_EMAIL")
 	capitalApiKey := os.Getenv("CAPITAL_API_KEY")
 	capitalApiKeyPassword := os.Getenv("CAPITAL_API_KEY_PASSWORD")
-	capClient, err := NewCapitalClient(capitalEmail, capitalApiKey, capitalApiKeyPassword)
+	capClient, err := NewCapitalClient(capitalEmail, capitalApiKey, capitalApiKeyPassword, true)
 	return capClient, err
 }
 
@@ -119,4 +119,28 @@ func TestGetPrices(t *testing.T) {
 		t.Errorf("Something is wrong with the response. Probably")
 	}
 	t.Logf("Market Details: %+v", pricesResponse)
+}
+
+func TestGetPositions(t *testing.T) {
+	capClient, _ := testCapitalClient()
+	capClient.CreateNewSession()
+
+	positionsResponse, err := capClient.GetPositions()
+	if err != nil {
+		fmt.Println(err)
+		t.Error()
+	}
+	t.Logf("Market Details: %+v", positionsResponse)
+}
+
+func TestCreatePosition(t *testing.T) {
+	capClient, _ := testCapitalClient()
+	capClient.CreateNewSession()
+
+	positionsResponse, err := capClient.CreatePosition("USDMXN", BUY, 19.20)
+	if err != nil {
+		fmt.Println(err)
+		t.Error()
+	}
+	t.Logf("Market Details: %+v", positionsResponse)
 }

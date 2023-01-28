@@ -15,14 +15,18 @@ import (
 	"strconv"
 )
 
+const CAPITAL_DOMAIN_NAME = "https://api-capital.backend-capital.com"
+const CAPITAL_DEBUG_DOMAIN_NAME = "https://demo-api-capital.backend-capital.com"
+
 type CapitalClientAPI struct {
 	CAPITAL_EMAIL            string
 	CAPITAL_API_KEY          string
 	CAPITAL_API_KEY_PASSWORD string
+	CapitalDomainName        string
 	HttpClient               *http.Client
 }
 
-func NewCapitalClient(capitalEmail string, capitalApiKey string, capitalApiKeyPassword string) (client *CapitalClientAPI, err error) {
+func NewCapitalClient(capitalEmail string, capitalApiKey string, capitalApiKeyPassword string, debug bool) (client *CapitalClientAPI, err error) {
 	if capitalEmail == "" {
 		return client, errors.New("Capital Email cannot be an empty string")
 	}
@@ -32,11 +36,16 @@ func NewCapitalClient(capitalEmail string, capitalApiKey string, capitalApiKeyPa
 	if capitalApiKeyPassword == "" {
 		return client, errors.New("Capital Api Key Password cannot be an empty string")
 	}
+	capitalDomainName := CAPITAL_DOMAIN_NAME
+	if debug {
+		capitalDomainName = CAPITAL_DEBUG_DOMAIN_NAME
+	}
 
 	return &CapitalClientAPI{
 		CAPITAL_EMAIL:            capitalEmail,
 		CAPITAL_API_KEY:          capitalApiKey,
 		CAPITAL_API_KEY_PASSWORD: capitalApiKeyPassword,
+		CapitalDomainName:        capitalDomainName,
 		HttpClient:               &http.Client{Transport: nil},
 	}, nil
 }
@@ -227,4 +236,61 @@ func (capClient *CapitalClientAPI) GetPrices(epic string, resolution string) (pr
 	decoder.Decode(&pricesResponse)
 
 	return pricesResponse, nil
+}
+
+func (capClient *CapitalClientAPI) GetPositions() (positionsResponse PositionsResponse, err error) {
+	if capClient.HttpClient.Transport == nil {
+		return positionsResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+	}
+
+	request, _ := http.NewRequest("GET", "https://api-capital.backend-capital.com/api/v1/positions", nil)
+	response, err := capClient.HttpClient.Do(request)
+	if err != nil {
+		return positionsResponse, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return positionsResponse, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
+	}
+	positionsResponse = PositionsResponse{}
+	decoder := json.NewDecoder(response.Body)
+	decoder.Decode(&positionsResponse)
+
+	return positionsResponse, nil
+}
+
+type Direction string
+
+const (
+	SELL Direction = "SELL"
+	BUY  Direction = "BUY"
+)
+
+func (capClient *CapitalClientAPI) CreatePosition(epic string, direction Direction, size float64) (createPositionResponse CreatePositionResponse, err error) {
+	if capClient.HttpClient.Transport == nil {
+		return createPositionResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+	}
+
+	body, err := json.Marshal(CreatePositionBody{
+		Epic:      epic,
+		Direction: direction,
+		Size:      fmt.Sprintf("%v", size),
+	})
+	if err != nil {
+		return createPositionResponse, err
+	}
+
+	request, _ := http.NewRequest("POST", "https://api-capital.backend-capital.com/api/v1/positions", bytes.NewBuffer(body))
+	response, err := capClient.HttpClient.Do(request)
+	if err != nil {
+		return createPositionResponse, err
+	}
+	defer response.Body.Close()
+
+	createPositionResponse = CreatePositionResponse{}
+	decoder := json.NewDecoder(response.Body)
+	decoder.Decode(&createPositionResponse)
+
+	return createPositionResponse, nil
 }
