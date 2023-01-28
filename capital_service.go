@@ -211,20 +211,7 @@ func (capClient *CapitalClientAPI) GetMarketsDetails(epics []string) (MarketsDet
 	return marketsResponse, nil
 }
 
-type Timeframe string
-
-const (
-	MINUTE    Timeframe = "MINUTE"
-	MINUTE_5  Timeframe = "MINUTE_5"
-	MINUTE_15 Timeframe = "MINUTE_15"
-	MINUTE_30 Timeframe = "MINUTE_30"
-	HOUR      Timeframe = "HOUR"
-	HOUR_4    Timeframe = "HOUR_4"
-	DAY       Timeframe = "DAY"
-	WEEK      Timeframe = "WEEK"
-)
-
-func (capClient *CapitalClientAPI) GetPrices(epic string, resolution Timeframe) (pricesResponse PricesResponse, err error) {
+func (capClient *CapitalClientAPI) GetHistoricalPrices(epic string, resolution Timeframe) (pricesResponse PricesResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
 		return pricesResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
 	}
@@ -273,13 +260,6 @@ func (capClient *CapitalClientAPI) GetPositions() (positionsResponse PositionsRe
 	return positionsResponse, nil
 }
 
-type OrderDirection string
-
-const (
-	SELL OrderDirection = "SELL"
-	BUY  OrderDirection = "BUY"
-)
-
 type OrderType string
 
 const (
@@ -287,7 +267,7 @@ const (
 	STOP  OrderType = "STOP"
 )
 
-func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction OrderDirection, orderType OrderType, price float32, orderSize float32) (createWorkingOrder WorkingOrderResponse, err error) {
+func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Signal, orderType OrderType, price float32, orderSize float32) (createWorkingOrder WorkingOrderResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
 		return createWorkingOrder, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
 	}

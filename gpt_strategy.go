@@ -1,8 +1,6 @@
 package forexbot
 
-import (
-	"math"
-)
+import "math"
 
 /*
 GPT Prompt: Can you write a better strategy than the previous one, with a higher performance and less risk ?
@@ -60,18 +58,22 @@ func GPTStrategy(candles *Candles) (Signal, float64) {
 		lowerBand := make([]float64, 0)
 
 		// Calculate the Bollinger Bands for each data point
-		var movingAvg, variance float64
-		for j := 0; j < 20; j++ {
-			movingAvg += (*candles)[j].Close.Bid
-		}
-		movingAvg /= 20
-		for j := 0; j < 20; j++ {
-			variance += math.Pow((*candles)[j].Close.Bid-movingAvg, 2)
-		}
-		stdDev := math.Sqrt(variance / float64(20))
 		for i := 20; i < numberOfCandles; i++ {
-			movingAvg += ((*candles)[i].Close.Bid - (*candles)[i-20].Close.Bid) / 20
-			variance += ((*candles)[i].Close.Bid - movingAvg) * ((*candles)[i].Close.Bid - (*candles)[i-20].Close.Bid)
+			// Calculate the moving average
+			var movingAvg float64
+			for j := i - 20; j < i; j++ {
+				movingAvg += (*candles)[j].Close.Bid
+			}
+			movingAvg /= 20
+
+			// Calculate the standard deviation
+			var variance float64
+			for j := i - 20; j < i; j++ {
+				variance += math.Pow((*candles)[j].Close.Bid-movingAvg, 2)
+			}
+			stdDev := math.Sqrt(variance / float64(20))
+
+			// Calculate the Bollinger Bands
 			upperBand = append(upperBand, movingAvg+2*stdDev)
 			middleBand = append(middleBand, movingAvg)
 			lowerBand = append(lowerBand, movingAvg-2*stdDev)

@@ -8,7 +8,7 @@ import (
 func TestMarshalCapitalPrices(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
-	capitalPricesResponse, _ := capClient.GetPrices("USDMXN", MINUTE_30)
+	capitalPricesResponse, _ := capClient.GetHistoricalPrices("USDMXN", MINUTE_30)
 
 	var candles Candles
 	err := candles.MarshalCapitalPrices(capitalPricesResponse.Prices)

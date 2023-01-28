@@ -110,7 +110,7 @@ func TestGetPrices(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
-	pricesResponse, err := capClient.GetPrices("USDMXN", MINUTE_30)
+	pricesResponse, err := capClient.GetHistoricalPrices("USDMXN", MINUTE_30)
 	if err != nil {
 		fmt.Println(err)
 		t.Error()
