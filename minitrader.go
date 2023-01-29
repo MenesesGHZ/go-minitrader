@@ -3,20 +3,21 @@ package forexbot
 import "fmt"
 
 type Minitrader struct {
-	ID                   int
 	Epic                 string
-	InvestmentPercentage float32
+	InvestmentPercentage float64
 	Timeframe            Timeframe
 	Status               MinitraderStatus
 	MarketStatus         MinitraderMarketStatus
 	Strategy             Strategy
-	candlesChannel       chan *Candles
+	candlesChannel       chan Candles // TODO: Implement "Pipeline" Pattern To Handle Larger Data Efficiently
 }
 
 type MinitraderStatus string
 
 const (
 	// healthy statuses
+	INITIALIZING      MinitraderStatus = "INITIALIZING"
+	RUNNING           MinitraderStatus = "RUNNING"
 	HOLDING           MinitraderStatus = "HOLDING"
 	SELL_ORDER_ACTIVE MinitraderStatus = "SELL_ORDER_ACTIVE"
 	BUY_ORDER_ACTIVE  MinitraderStatus = "BUY_ORDER_ACTIVE"
@@ -44,6 +45,17 @@ const (
 	DAY       Timeframe = "DAY"
 	WEEK      Timeframe = "WEEK"
 )
+
+func NewMinitrader(epic string, investmentPercentage float64, timeframe Timeframe, strategy Strategy) *Minitrader {
+	return &Minitrader{
+		Epic:                 epic,
+		InvestmentPercentage: investmentPercentage,
+		Timeframe:            timeframe,
+		Strategy:             strategy,
+		Status:               INITIALIZING,
+		candlesChannel:       make(chan Candles),
+	}
+}
 
 func (minitrader *Minitrader) Start() {
 	select {

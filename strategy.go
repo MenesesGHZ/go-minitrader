@@ -1,6 +1,6 @@
 package forexbot
 
-type Strategy func(candles *Candles) (Signal, float64)
+type Strategy func(candles Candles) (Signal, float64)
 
 type Signal string
 
