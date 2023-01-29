@@ -38,20 +38,22 @@ type NewSessionResponse struct {
 }
 
 type AccountsResponse struct {
-	Accounts []struct {
-		AccountID   string `json:"accountId"`
-		AccountName string `json:"accountName"`
-		Status      string `json:"status"`
-		AccountType string `json:"accountType"`
-		Preferred   bool   `json:"preferred"`
-		Balance     struct {
-			Balance    float64 `json:"balance"`    // maps to Equity
-			Deposit    float64 `json:"deposit"`    // maps to Funds
-			ProfitLoss float64 `json:"profitLoss"` // maps to P&L
-			Available  float64 `json:"available"`  // maps to Available
-		} `json:"balance"`
-		Currency string `json:"currency"`
-	} `json:"accounts"`
+	Accounts []AccountResponse `json:"accounts"`
+}
+
+type AccountResponse struct {
+	AccountID   string `json:"accountId"`
+	AccountName string `json:"accountName"`
+	Status      string `json:"status"`
+	AccountType string `json:"accountType"`
+	Preferred   bool   `json:"preferred"`
+	Balance     struct {
+		Balance    float64 `json:"balance"`    // maps to Equity
+		Deposit    float64 `json:"deposit"`    // maps to Funds
+		ProfitLoss float64 `json:"profitLoss"` // maps to P&L
+		Available  float64 `json:"available"`  // maps to Available
+	} `json:"balance"`
+	Currency string `json:"currency"`
 }
 
 type MarketsDetailsResponse struct {

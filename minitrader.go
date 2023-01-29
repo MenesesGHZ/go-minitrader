@@ -8,7 +8,7 @@ import (
 
 type Minitrader struct {
 	Epic                 string
-	InvestmentPercentage float64
+	InvestmentPercentage float64 
 	Timeframe            Timeframe
 	Status               MinitraderStatus
 	MarketStatus         MinitraderMarketStatus
@@ -17,13 +17,16 @@ type Minitrader struct {
 	capitalClient       *CapitalClientAPI
 	candlesChannel      chan Candles // TODO: Implement "Pipeline" Pattern To Handle Larger Data Efficiently
 	activeDealReference string
+
+	volatileAmountAvailable      float64 
+	volatileInvestmentPercentage float64
 }
 
 type MinitraderStatus string
 
 const (
 	// healthy statuses
-	INITIALIZING      MinitraderStatus = "INITIALIZING"
+	NEW               MinitraderStatus = "NEW"
 	RUNNING           MinitraderStatus = "RUNNING"
 	HOLDING           MinitraderStatus = "HOLDING"
 	SELL_ORDER_ACTIVE MinitraderStatus = "SELL_ORDER_ACTIVE"
@@ -60,12 +63,14 @@ func NewMinitrader(epic string, investmentPercentage float64, timeframe Timefram
 		InvestmentPercentage: investmentPercentage,
 		Timeframe:            timeframe,
 		Strategy:             strategy,
-		Status:               INITIALIZING,
+		Status:               NEW,
 		candlesChannel:       make(chan Candles),
+		volatileInvestmentPercentage: investmentPercentage
 	}
 }
 
 func (minitrader *Minitrader) Start() {
+	minitrader.Status = RUNNING
 	for candles := range minitrader.candlesChannel {
 		signal, price := minitrader.Strategy(candles)
 		err := minitrader.Effect(signal, price)
@@ -108,7 +113,7 @@ func (minitrader *Minitrader) makeOrderAndWaitUntilComplete(epic string, signal 
 
 	// get amount available from preferred account or get amount from position/order confirmation
 	if signal == BUY {
-		amount, err = minitrader.getAmountFromPreferredAccount() // TODO: Need to return a good quantity base on price and available usd
+		amount := minitrader.volatileAmountAvailable // TODO; Double check if quantity good (amount)
 	} else {
 		amount, err = minitrader.getAmountFromPositionOrderConfirmation()
 	}
@@ -133,43 +138,20 @@ func (minitrader *Minitrader) makeOrderAndWaitUntilComplete(epic string, signal 
 		return nil
 	}
 
-	// update minitrader status
+	// update minitrader status and active deal reference
 	if signal == BUY {
 		minitrader.Status = HOLDING
 		minitrader.activeDealReference = dealReference
 	} else {
 		minitrader.Status = RUNNING
+		minitrader.activeDealReference = ""
 	}
 
 	return nil
 }
 
-func (minitrader *Minitrader) getAmountFromPreferredAccount() (float64, error) {
-	var amount float64
-	tryCounter := 0
-	for tryCounter < 3 {
-		accountsResponse, err := minitrader.capitalClient.GetAllAccounts()
-		if err != nil {
-			tryCounter++
-			time.Sleep(time.Second * 5)
-			continue
-		}
 
-		for _, account := range accountsResponse.Accounts {
-			if account.Preferred {
-				amount = account.Balance.Available
-				break
-			}
-		}
-		break
-	}
-	if tryCounter == 3 {
-		return 0, errors.New("Failed to get amount from preferred account")
-	}
-	return amount, nil
-}
-
-func (minitrader *Minitrader) getAmountFromPositionOrderConfirmation() (amount float64, err error) {
+func (minitrader *Minitrader) getAmountFromPositionOrderConfirmation() (amount float64, err error) { // TODO: Unused
 	tryCounter := 0
 	for tryCounter < 3 {
 		positionOrderResponse, err := minitrader.capitalClient.GetPositionOrderConfirmation(minitrader.activeDealReference)

@@ -354,6 +354,19 @@ func (capClient *CapitalClientAPI) GetPositionOrderConfirmation(dealReference st
 	return confirmation, nil
 }
 
+func (capClient *CapitalClientAPI) GetPreferredAccount() (AccountResponse, error) {
+	accountsResponse, err := capClient.GetAllAccounts()
+	if err != nil {
+		return AccountResponse{}, err
+	}
+	for _, account := range accountsResponse.Accounts {
+		if account.Preferred {
+			return account, nil
+		}
+	}
+	return AccountResponse{}, errors.New("Unexpected Error: Preferred Account Doesn't exist. Please make an issue on Github")
+}
+
 func (capClient *CapitalClientAPI) DeleteWorkingOrder(dealReference string) (deleteWorkingResponse WorkingOrderResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
 		return deleteWorkingResponse, &CapitalClientUnathenticated{}

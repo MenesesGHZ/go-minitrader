@@ -1,6 +1,9 @@
 package forexbot
 
 import (
+	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
@@ -15,7 +18,7 @@ type MinitraderPool struct {
 	epicTimeframeMinitraderMap map[string][]*Minitrader // used for fetching historical prices
 }
 
-func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrader) *MinitraderPool {
+func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrader) (*MinitraderPool, error) {
 	pool := &MinitraderPool{
 		CapitalClient: capitalClient,
 		Minitraders:   minitraders,
@@ -35,33 +38,41 @@ func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrad
 	}
 
 	// build a map for avoiding requesting same data while getting historical prices
-	// giving a key, the minitrader list for that key will contain minitraders
-	// with the same epic and timeframe
+	// giving a key, the minitrader list for that key will contain minitraders with the same epic and timeframe
+	availablePercentage := 0.0
 	for _, minitrader := range minitraders {
 		key := minitrader.Epic + string(minitrader.Timeframe)
 		pool.epicTimeframeMinitraderMap[key] = append(pool.epicTimeframeMinitraderMap[key], minitrader)
+
+		availablePercentage += minitrader.InvestmentPercentage
 	}
 
-	return pool
+	if availablePercentage == 100.0 {
+		return &MinitraderPool{}, errors.New(fmt.Sprintf("Minitraders `InvestmentPercentage` Sum Must Be 100%; Current Sum: %f", availablePercentage))
+	}
+
+	return pool, nil
 }
 
 func (pool *MinitraderPool) Start() {
 	for _, minitrader := range pool.Minitraders {
-		minitrader.capitalClient = minitrader.capitalClient
+		minitrader.capitalClient = pool.CapitalClient
 		go minitrader.Start()
 	}
-	go pool.UpdateCandlesData(time.Second)
+	go pool.UpdateMinitradersData(time.Second)
 	go pool.UpdateMarketStatus(time.Minute)
 	go pool.AuthenticateSession(time.Minute * 9)
 }
 
 func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
 	for {
-		// fetch market details
 		marketsDetailsResponse, err := pool.CapitalClient.GetMarketsDetails(pool.epics)
-		if err != nil {
-			// send trough channel a nessage to create a new session
-			//marketStatusUpdated <- false
+		if _, ok := err.(*CapitalClientUnathenticated); ok {
+			// break loop and retry after sleeptime ends.
+			// AuthenticateSession goroutine should handle this
+			break
+		} else if err != nil {
+			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 		}
 		for _, detail := range marketsDetailsResponse.MarketDetails {
 			marketStatus := MinitraderMarketStatus(detail.Snapshot.MarketStatus)
@@ -69,21 +80,32 @@ func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
 				minitrader.MarketStatus = marketStatus
 			}
 		}
-		// marketStatusUpdated <- true
 
 		time.Sleep(sleepTime)
 	}
 }
 
-func (pool *MinitraderPool) UpdateCandlesData(sleepTime time.Duration) {
+func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 	for {
+		// update minitraderes amountAvailable to invest
+		account, err := pool.CapitalClient.GetPreferredAccount()
+		if _, ok := err.(*CapitalClientUnathenticated); ok {
+			// break loop and retry after sleeptime ends. AuthenticateSession goroutine should handle this
+			break
+		} else if err != nil {
+			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
+		}
+		pool.updateMinitradersAmountAvailable(account.Balance.Available)
+
+		// update minitraders candles data
 		for _, minitraders := range pool.epicTimeframeMinitraderMap {
 			epic, timeframe := minitraders[0].Epic, minitraders[0].Timeframe
 			pricesResponse, err := pool.CapitalClient.GetHistoricalPrices(epic, timeframe)
 			if _, ok := err.(*CapitalClientUnathenticated); ok {
-				// break loop and retry after sleeptime ends.
-				// AuthenticateSession goroutine should handle this
+				// break loop and retry after sleeptime ends. AuthenticateSession goroutine should handle this
 				break
+			} else if err != nil {
+				log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 			}
 
 			var candles Candles
@@ -105,5 +127,24 @@ func (pool *MinitraderPool) AuthenticateSession(sleepTime time.Duration) {
 	for {
 		pool.CapitalClient.CreateNewSession()
 		time.Sleep(sleepTime)
+	}
+}
+
+func (pool *MinitraderPool) updateMinitradersAmountAvailable(amountAvailable float64) {
+	var totalPercent float64
+	for _, minitrader := range pool.Minitraders {
+		if minitrader.Status == NEW || minitrader.Status == RUNNING {
+			totalPercent += minitrader.InvestmentPercentage
+		}
+	}
+
+	for _, minitrader := range pool.Minitraders {
+		if minitrader.Status != NEW && minitrader.Status != RUNNING {
+			minitrader.volatileInvestmentPercentage = 0
+			minitrader.volatileAmountAvailable = 0
+			continue
+		}
+		minitrader.volatileInvestmentPercentage = minitrader.InvestmentPercentage / totalPercent * 100
+		minitrader.volatileAmountAvailable = minitrader.InvestmentPercentage / 100 * amountAvailable
 	}
 }
