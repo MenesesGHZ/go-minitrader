@@ -273,7 +273,7 @@ const (
 	STOP  OrderType = "STOP"
 )
 
-func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Signal, orderType OrderType, price float32, orderSize float32) (createWorkingOrder WorkingOrderResponse, err error) {
+func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Signal, orderType OrderType, targetPrice float64, orderSize float64) (createWorkingOrder WorkingOrderResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
 		return createWorkingOrder, &CapitalClientUnathenticated{}
 	}
@@ -282,7 +282,7 @@ func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Sig
 		Epic:      epic,
 		Direction: direction,
 		Type:      orderType,
-		Level:     price,
+		Level:     targetPrice,
 		Size:      orderSize,
 	})
 	if err != nil {
@@ -306,6 +306,29 @@ func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Sig
 	decoder.Decode(&createWorkingOrder)
 
 	return createWorkingOrder, nil
+}
+
+func (capClient *CapitalClientAPI) GetAllWorkingOrders() (workingOrdersResponse WorkingOrdersResponse, err error) {
+	if capClient.HttpClient.Transport == nil {
+		return workingOrdersResponse, &CapitalClientUnathenticated{}
+	}
+
+	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/workingorders", nil)
+	response, err := capClient.HttpClient.Do(request)
+	if err != nil {
+		return workingOrdersResponse, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return workingOrdersResponse, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
+	}
+
+	workingOrdersResponse = WorkingOrdersResponse{}
+	decoder := json.NewDecoder(response.Body)
+	decoder.Decode(&workingOrdersResponse)
+
+	return workingOrdersResponse, nil
 }
 
 func (capClient *CapitalClientAPI) GetPositionOrderConfirmation(dealReference string) (confirmation PositionOrderConfirmationResponse, err error) {

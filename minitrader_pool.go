@@ -47,6 +47,7 @@ func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrad
 
 func (pool *MinitraderPool) Start() {
 	for _, minitrader := range pool.Minitraders {
+		minitrader.capitalClient = minitrader.capitalClient
 		go minitrader.Start()
 	}
 	go pool.UpdateCandlesData(time.Second)

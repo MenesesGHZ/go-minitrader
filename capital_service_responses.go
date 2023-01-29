@@ -45,10 +45,10 @@ type AccountsResponse struct {
 		AccountType string `json:"accountType"`
 		Preferred   bool   `json:"preferred"`
 		Balance     struct {
-			Balance    float64 `json:"balance"`
-			Deposit    float64 `json:"deposit"`
-			ProfitLoss float64 `json:"profitLoss"`
-			Available  float64 `json:"available"`
+			Balance    float64 `json:"balance"`    // maps to Equity
+			Deposit    float64 `json:"deposit"`    // maps to Funds
+			ProfitLoss float64 `json:"profitLoss"` // maps to P&L
+			Available  float64 `json:"available"`  // maps to Available
 		} `json:"balance"`
 		Currency string `json:"currency"`
 	} `json:"accounts"`
@@ -181,6 +181,53 @@ type WorkingOrderResponse struct {
 	DealReference string `json:"dealReference"`
 }
 
+type WorkingOrdersResponse struct {
+	WorkingOrders []struct {
+		WorkingOrderData struct {
+			DealID          string  `json:"dealId"`
+			Direction       string  `json:"direction"`
+			Epic            string  `json:"epic"`
+			OrderSize       int     `json:"orderSize"`
+			OrderLevel      int     `json:"orderLevel"`
+			TimeInForce     string  `json:"timeInForce"`
+			GoodTillDate    string  `json:"goodTillDate"`
+			GoodTillDateUTC string  `json:"goodTillDateUTC"`
+			CreatedDate     string  `json:"createdDate"`
+			CreatedDateUTC  string  `json:"createdDateUTC"`
+			GuaranteedStop  bool    `json:"guaranteedStop"`
+			OrderType       string  `json:"orderType"`
+			StopDistance    float64 `json:"stopDistance"`
+			ProfitDistance  float64 `json:"profitDistance"`
+			CurrencyCode    string  `json:"currencyCode"`
+		} `json:"workingOrderData"`
+		MarketData struct {
+			InstrumentName           string  `json:"instrumentName"`
+			Expiry                   string  `json:"expiry"`
+			MarketStatus             string  `json:"marketStatus"`
+			Epic                     string  `json:"epic"`
+			InstrumentType           string  `json:"instrumentType"`
+			LotSize                  int     `json:"lotSize"`
+			High                     float64 `json:"high"`
+			Low                      float64 `json:"low"`
+			PercentageChange         float64 `json:"percentageChange"`
+			NetChange                float64 `json:"netChange"`
+			Bid                      float64 `json:"bid"`
+			Offer                    float64 `json:"offer"`
+			UpdateTime               string  `json:"updateTime"`
+			UpdateTimeUTC            string  `json:"updateTimeUTC"`
+			DelayTime                int     `json:"delayTime"`
+			StreamingPricesAvailable bool    `json:"streamingPricesAvailable"`
+			ScalingFactor            int     `json:"scalingFactor"`
+		} `json:"marketData"`
+	} `json:"workingOrders"`
+}
+
+type ConfirmationStatus string
+
+const (
+	DELETED ConfirmationStatus = "DELETED"
+)
+
 type PositionOrderConfirmationResponse struct {
 	Date          string `json:"date"`
 	Status        string `json:"status"`
@@ -194,7 +241,7 @@ type PositionOrderConfirmationResponse struct {
 		Status string `json:"status"`
 	} `json:"affectedDeals"`
 	Level          float64 `json:"level"`
-	Size           int     `json:"size"`
+	Size           float64 `json:"size"` // maps to QTY (quantity)
 	Direction      string  `json:"direction"`
 	GuaranteedStop bool    `json:"guaranteedStop"`
 	TrailingStop   bool    `json:"trailingStop"`

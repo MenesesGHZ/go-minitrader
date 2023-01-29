@@ -1,7 +1,6 @@
 package forexbot
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -23,8 +22,7 @@ func _TestCapitalClient() (client *CapitalClientAPI, err error) {
 func TestNewCapitalClient(t *testing.T) {
 	_, err := _TestCapitalClient()
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 }
 
@@ -32,8 +30,7 @@ func TestGetEncriptionKey(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	encription, err := capClient.GetEncriptionKey()
 	if err != nil {
-		fmt.Println(err)
-		t.Errorf("Got Error")
+		t.Errorf("%v", err)
 	}
 	if len(encription.EncryptionKey) == 0 {
 		t.Errorf("Key is Empty")
@@ -46,8 +43,7 @@ func TestGetEncryptedPassword(t *testing.T) {
 	encription, _ := capClient.GetEncriptionKey()
 	encryptedPassword, err := capClient.GetEncryptedPassword(encription)
 	if err != nil {
-		fmt.Println(err)
-		t.Errorf("Got Error")
+		t.Errorf("%v", err)
 	}
 	t.Logf("Gathered Key: %s", encryptedPassword)
 }
@@ -56,12 +52,10 @@ func TestCreateNewSessionAccount(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	newSessionResponse, headerTokens, err := capClient.CreateNewSession()
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 	if newSessionResponse.ClientId == "" {
-		fmt.Println("ClientId should be populated. Contact `gerardo.meneses.hz@gmail.com`")
-		t.Error()
+		t.Errorf("ClientId should be populated. Contact `gerardo.meneses.hz@gmail.com`")
 	}
 	t.Logf("SessionResponse: %+v", newSessionResponse)
 	t.Logf("Token Headers: %+v", headerTokens)
@@ -73,8 +67,7 @@ func TestListWatchList(t *testing.T) { // TODO FIX, probably they change the jso
 
 	watchListResponse, err := capClient.GetWatchLists()
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 	t.Logf("WatchLists: %+v", watchListResponse)
 }
@@ -85,8 +78,7 @@ func TestGetAllAccounts(t *testing.T) {
 
 	accounts, err := capClient.GetAllAccounts()
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 	t.Logf("Accounts: %+v", accounts)
 }
@@ -97,8 +89,7 @@ func TestGetMarketsDetails(t *testing.T) {
 
 	marketsDetails, err := capClient.GetMarketsDetails([]string{"USDMXN", "EURUSD"})
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 	if marketsDetails.MarketDetails[0].Instrument.Epic == "" {
 		t.Errorf("Something is wrong with the response. Probably")
@@ -112,8 +103,7 @@ func TestGetPrices(t *testing.T) {
 
 	pricesResponse, err := capClient.GetHistoricalPrices("USDMXN", MINUTE_30)
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 	if len(pricesResponse.Prices) == 0 {
 		t.Errorf("No Data Parsed. Something is wrong with the response.")
@@ -127,8 +117,7 @@ func TestGetPositions(t *testing.T) {
 
 	positionsResponse, err := capClient.GetPositions()
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
 	}
 	t.Logf("Market Details: %+v", positionsResponse)
 }
@@ -137,23 +126,35 @@ func TestCreateWorkingOrder(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
-	workingOrderResponse, err := capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)
+	workingOrderResponse, err := capClient.CreateWorkingOrder("BTCUSD", BUY, LIMIT, 24000.0, 10)
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
+
 	}
 	t.Logf("Market Details: %+v", workingOrderResponse)
+}
+
+func TestGetAllWorkingOrders(t *testing.T) {
+	capClient, _ := _TestCapitalClient()
+	capClient.CreateNewSession()
+	capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)
+
+	workingOrdersResponse, err := capClient.GetAllWorkingOrders()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	t.Logf("Market Details: %+v", workingOrdersResponse)
 }
 
 func TestGetPositionOrderConfirmation(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
-	workingOrderResponse, _ := capClient.CreateWorkingOrder("USDMXN", BUY, LIMIT, 19.20, 1000)
+	workingOrderResponse, _ := capClient.CreateWorkingOrder("BTCUSD", BUY, LIMIT, 24000.0, 10)
 	positionOrderConfirmation, err := capClient.GetPositionOrderConfirmation(workingOrderResponse.DealReference)
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Errorf("%v", err)
+
 	}
 	t.Logf("Market Details: %+v", positionOrderConfirmation)
 }
