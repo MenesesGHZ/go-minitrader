@@ -26,6 +26,12 @@ type CapitalClientAPI struct {
 	HttpClient               *http.Client
 }
 
+type CapitalClientUnathenticated struct{}
+
+func (err *CapitalClientUnathenticated) Error() string {
+	return "A session is need; Run `CreateNewSession()` to authenticate first"
+}
+
 func NewCapitalClient(capitalEmail string, capitalApiKey string, capitalApiKeyPassword string, debug bool) (client *CapitalClientAPI, err error) {
 	if capitalEmail == "" {
 		return client, errors.New("Capital Email cannot be an empty string")
@@ -163,7 +169,7 @@ func (capClient *CapitalClientAPI) GetEncryptedPassword(encriptionResponse Encri
 
 func (capClient *CapitalClientAPI) GetAllAccounts() (AccountsResponse, error) {
 	if capClient.HttpClient.Transport == nil {
-		return AccountsResponse{}, errors.New("A Session is needed; Run `capClient.CreateNewSession()` to authenticate")
+		return AccountsResponse{}, &CapitalClientUnathenticated{}
 	}
 	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/accounts", nil)
 	response, err := capClient.HttpClient.Do(request)
@@ -213,7 +219,7 @@ func (capClient *CapitalClientAPI) GetMarketsDetails(epics []string) (MarketsDet
 
 func (capClient *CapitalClientAPI) GetHistoricalPrices(epic string, resolution Timeframe) (pricesResponse PricesResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
-		return pricesResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return pricesResponse, &CapitalClientUnathenticated{}
 	}
 
 	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/prices/"+epic, nil)
@@ -240,7 +246,7 @@ func (capClient *CapitalClientAPI) GetHistoricalPrices(epic string, resolution T
 
 func (capClient *CapitalClientAPI) GetPositions() (positionsResponse PositionsResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
-		return positionsResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return positionsResponse, &CapitalClientUnathenticated{}
 	}
 
 	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/positions", nil)
@@ -269,7 +275,7 @@ const (
 
 func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Signal, orderType OrderType, price float32, orderSize float32) (createWorkingOrder WorkingOrderResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
-		return createWorkingOrder, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return createWorkingOrder, &CapitalClientUnathenticated{}
 	}
 
 	body, err := json.Marshal(CreateWorkingOrderBody{
@@ -304,7 +310,7 @@ func (capClient *CapitalClientAPI) CreateWorkingOrder(epic string, direction Sig
 
 func (capClient *CapitalClientAPI) GetPositionOrderConfirmation(dealReference string) (confirmation PositionOrderConfirmationResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
-		return confirmation, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return confirmation, &CapitalClientUnathenticated{}
 	}
 
 	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/confirms/"+dealReference, nil)
@@ -327,7 +333,7 @@ func (capClient *CapitalClientAPI) GetPositionOrderConfirmation(dealReference st
 
 func (capClient *CapitalClientAPI) DeleteWorkingOrder(dealReference string) (deleteWorkingResponse WorkingOrderResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
-		return deleteWorkingResponse, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return deleteWorkingResponse, &CapitalClientUnathenticated{}
 	}
 
 	request, _ := http.NewRequest("DELETE", capClient.CapitalDomainName+"api/v1/workingorders/"+dealReference, nil)
