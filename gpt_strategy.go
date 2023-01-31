@@ -89,11 +89,12 @@ func GPTStrategy(candles Candles) (Signal, float64) {
 		lowerBand = append(lowerBand, movingAvg-2*stdDev)
 	}
 
-	if candles[numberOfCandles-1].Close.Bid < lowerBand[numberOfCandles-21] && rsi[len(rsi)-1] < 30 {
-		return BUY, candles[numberOfCandles-1].Close.Bid
+	price := candles[numberOfCandles-1].Close.Bid
+	if price < lowerBand[numberOfCandles-21] && rsi[len(rsi)-1] < 30 {
+		return BUY, price
 	}
-	if candles[numberOfCandles-1].Close.Bid > upperBand[numberOfCandles-21] && rsi[len(rsi)-1] > 70 {
-		return SELL, candles[numberOfCandles-1].Close.Bid
+	if price > upperBand[numberOfCandles-21] && rsi[len(rsi)-1] > 70 {
+		return SELL, price
 	}
-	return NONE, 0
+	return NONE, price
 }

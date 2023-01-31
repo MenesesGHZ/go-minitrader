@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 const CAPITAL_DOMAIN_NAME = "https://api-capital.backend-capital.com"
@@ -187,13 +188,10 @@ func (capClient *CapitalClientAPI) GetAllAccounts() (AccountsResponse, error) {
 
 func (capClient *CapitalClientAPI) GetMarketsDetails(epics []string) (MarketsDetailsResponse, error) {
 	if capClient.HttpClient.Transport == nil {
-		return MarketsDetailsResponse{}, errors.New("A session is need; Run `capClient.CreateNewSession()` to authenticate first")
+		return MarketsDetailsResponse{}, &CapitalClientUnathenticated{}
 	}
 
 	values := url.Values{}
-	//if searchTerm != "" {
-	//	values.Set("searchTerm", searchTerm)
-	//}
 	for _, epic := range epics {
 		values.Add("epics", epic)
 	}
@@ -217,29 +215,47 @@ func (capClient *CapitalClientAPI) GetMarketsDetails(epics []string) (MarketsDet
 	return marketsResponse, nil
 }
 
-func (capClient *CapitalClientAPI) GetHistoricalPrices(epic string, resolution Timeframe) (pricesResponse PricesResponse, err error) {
+func (capClient *CapitalClientAPI) GetHistoricalPrices(epic string, resolution Timeframe, numberOfCandles int) (pricesResponse PricesResponse, err error) {
 	if capClient.HttpClient.Transport == nil {
 		return pricesResponse, &CapitalClientUnathenticated{}
 	}
 
-	request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/prices/"+epic, nil)
-	values := request.URL.Query()
-	values.Set("max", "100")
-	values.Set("resolution", string(resolution))
-	request.URL.RawQuery = values.Encode()
-
-	response, err := capClient.HttpClient.Do(request)
-	if err != nil {
-		return pricesResponse, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(response.Body)
-		return pricesResponse, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
-	}
 	pricesResponse = PricesResponse{}
-	decoder := json.NewDecoder(response.Body)
-	decoder.Decode(&pricesResponse)
+	oldestCandleTime := ""
+	for numberOfCandles != 0 {
+		max := 100
+		if max > numberOfCandles {
+			max = numberOfCandles
+		}
+		numberOfCandles -= max
+
+		request, _ := http.NewRequest("GET", capClient.CapitalDomainName+"/api/v1/prices/"+epic, nil)
+		values := request.URL.Query()
+		values.Set("max", strconv.Itoa(max))
+		values.Set("resolution", string(resolution))
+		if oldestCandleTime != "" {
+			values.Set("to", oldestCandleTime)
+		}
+		request.URL.RawQuery = values.Encode()
+
+		response, err := capClient.HttpClient.Do(request)
+		if err != nil {
+			return pricesResponse, err
+		}
+		if response.StatusCode != 200 {
+			body, _ := ioutil.ReadAll(response.Body)
+			return pricesResponse, errors.New(fmt.Sprintf("Unexpected [%d] Status Code Response - %s", response.StatusCode, string(body)))
+		}
+		tempResponse := PricesResponse{}
+		decoder := json.NewDecoder(response.Body)
+		decoder.Decode(&tempResponse)
+		response.Body.Close()
+
+		pricesResponse.Prices = append(tempResponse.Prices, pricesResponse.Prices...)
+		oldestParsedTime, _ := time.Parse("2006-01-02T15:04:05", pricesResponse.Prices[0].SnapshotTimeUTC)
+		oldestParsedTime = oldestParsedTime.Add(-time.Duration(TimeframeMinuteMap[resolution]) * time.Minute)
+		oldestCandleTime = oldestParsedTime.Format("2006-01-02T15:04:05")
+	}
 
 	return pricesResponse, nil
 }

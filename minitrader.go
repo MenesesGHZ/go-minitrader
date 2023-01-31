@@ -61,6 +61,17 @@ const (
 	WEEK      Timeframe = "WEEK"
 )
 
+var TimeframeMinuteMap = map[Timeframe]int{
+	MINUTE:    1,
+	MINUTE_5:  5,
+	MINUTE_15: 15,
+	MINUTE_30: 30,
+	HOUR:      60,
+	HOUR_4:    240,
+	DAY:       1440,
+	WEEK:      10080,
+}
+
 func NewMinitrader(epic string, investmentPercentage float64, stopLossPercentage float64, timeframe Timeframe, strategy Strategy) *Minitrader {
 	return &Minitrader{
 		Epic:                         epic,
@@ -89,6 +100,8 @@ func (minitrader *Minitrader) Start(waitGroup *sync.WaitGroup) {
 }
 
 func (minitrader *Minitrader) Effect(signal Signal, price float64) error {
+	log.Printf("Epic: %s - Signal: %v - Price: %v", minitrader.Epic, signal, price)
+
 	if minitrader.MarketStatus == CLOSED {
 		return errors.New("Unable To Do Trading; Market Closed")
 	}

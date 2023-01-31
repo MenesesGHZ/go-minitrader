@@ -25,6 +25,8 @@ func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrad
 		CapitalClient: capitalClient,
 		Minitraders:   minitraders,
 
+		wg:                         &sync.WaitGroup{},
+		epics:                      make([]string, 0),
 		epicMinitraderMap:          make(map[string][]*Minitrader),
 		epicTimeframeMinitraderMap: make(map[string][]*Minitrader),
 	}
@@ -77,7 +79,7 @@ func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
 			time.Sleep(sleepTime)
 			continue
 		} else if err != nil {
-			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
+			log.Fatalf("Unexpected Error: %v", err)
 		}
 		for _, detail := range marketsDetailsResponse.MarketDetails {
 			marketStatus := MinitraderMarketStatus(detail.Snapshot.MarketStatus)
@@ -105,7 +107,7 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 		// update minitraders candles data
 		for _, minitraders := range pool.epicTimeframeMinitraderMap {
 			epic, timeframe := minitraders[0].Epic, minitraders[0].Timeframe
-			pricesResponse, err := pool.CapitalClient.GetHistoricalPrices(epic, timeframe)
+			pricesResponse, err := pool.CapitalClient.GetHistoricalPrices(epic, timeframe, 200)
 			if _, ok := err.(*CapitalClientUnathenticated); ok {
 				// break loop, then sleep and retry. AuthenticateSession goroutine should handle this
 				break

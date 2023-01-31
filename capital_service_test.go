@@ -101,7 +101,7 @@ func TestGetPrices(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
 
-	pricesResponse, err := capClient.GetHistoricalPrices("USDMXN", MINUTE_30)
+	pricesResponse, err := capClient.GetHistoricalPrices("USDMXN", MINUTE_30, 250)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -157,4 +157,18 @@ func TestGetPositionOrderConfirmation(t *testing.T) {
 
 	}
 	t.Logf("Market Details: %+v", positionOrderConfirmation)
+}
+
+func TestGetPreferredAccount(t *testing.T) {
+	capClient, _ := _TestCapitalClient()
+	capClient.CreateNewSession()
+
+	accountResponse, err := capClient.GetPreferredAccount()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	if accountResponse.AccountID == "" {
+		t.Error("No Data Parsed. Something is wrong with the response.")
+	}
+	t.Logf("Prefered Account: %+v", accountResponse)
 }

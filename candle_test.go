@@ -1,24 +1,25 @@
 package gominitrader
 
 import (
-	"fmt"
 	"testing"
 )
 
 func TestMarshalCapitalPrices(t *testing.T) {
 	capClient, _ := _TestCapitalClient()
 	capClient.CreateNewSession()
-	capitalPricesResponse, _ := capClient.GetHistoricalPrices("USDMXN", MINUTE_30)
+	capitalPricesResponse, _ := capClient.GetHistoricalPrices("USDMXN", MINUTE_15, 250)
 
 	var candles Candles
 	err := candles.MarshalCapitalPrices(capitalPricesResponse.Prices)
 	if err != nil {
-		fmt.Println(err)
-		t.Error()
+		t.Error(err)
 	}
 	if len(candles) == 0 {
-		t.Errorf("Candles Not Being Pulled or Marshalled Properly")
+		t.Error("Candles Not Being Pulled or Marshalled Properly")
+	}
+	if len(candles) != 250 {
+		t.Errorf("Missing Candles To Pull. Current Number of Candles: %d", len(candles))
 	}
 
-	t.Logf("Marshalled Candles: %v+\n", candles)
+	//t.Logf("Marshalled Candles: %v+\n", candles)
 }
