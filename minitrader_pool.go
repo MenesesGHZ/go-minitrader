@@ -1,4 +1,4 @@
-package forexbot
+package gominitrader
 
 import (
 	"errors"
@@ -14,6 +14,7 @@ type MinitraderPool struct {
 	Minitraders   []*Minitrader
 	CapitalClient *CapitalClientAPI
 
+	wg                         *sync.WaitGroup
 	epics                      []string                 // slice of unique epics use on minitraders
 	epicMinitraderMap          map[string][]*Minitrader // used for checking market status
 	epicTimeframeMinitraderMap map[string][]*Minitrader // used for fetching historical prices
@@ -56,26 +57,25 @@ func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrad
 }
 
 func (pool *MinitraderPool) Start() {
-	var wg sync.WaitGroup
 	for _, minitrader := range pool.Minitraders {
 		minitrader.capitalClient = pool.CapitalClient
-		go minitrader.Start(&wg)
-		wg.Add(1)
+		go minitrader.Start(pool.wg)
+		pool.wg.Add(1)
 	}
 	go pool.UpdateMinitradersData(time.Second)
 	go pool.UpdateMarketStatus(time.Minute)
 	go pool.AuthenticateSession(time.Minute * 9)
 	go pool.Pulse()
-	wg.Wait()
+	pool.wg.Wait()
 }
 
 func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
 	for {
 		marketsDetailsResponse, err := pool.CapitalClient.GetMarketsDetails(pool.epics)
 		if _, ok := err.(*CapitalClientUnathenticated); ok {
-			// break loop and retry after sleeptime ends.
-			// AuthenticateSession goroutine should handle this
-			break
+			// sleep and retry. AuthenticateSession goroutine should handle this
+			time.Sleep(sleepTime)
+			continue
 		} else if err != nil {
 			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 		}
@@ -85,7 +85,6 @@ func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
 				minitrader.MarketStatus = marketStatus
 			}
 		}
-
 		time.Sleep(sleepTime)
 	}
 }
@@ -130,9 +129,20 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 }
 
 func (pool *MinitraderPool) AuthenticateSession(sleepTime time.Duration) {
-	for {
-		pool.CapitalClient.CreateNewSession()
+	tryCounter := 0
+	for tryCounter < 3 {
+		_, _, err := pool.CapitalClient.CreateNewSession()
 		time.Sleep(sleepTime)
+		if err != nil {
+			tryCounter++
+		} else {
+			tryCounter = 0
+		}
+	}
+
+	// stop minitrader_pool; TODO: improve logging
+	for i := 0; i < len(pool.Minitraders); i++ {
+		pool.wg.Done()
 	}
 }
 
