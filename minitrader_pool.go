@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
@@ -47,21 +48,25 @@ func NewMinitraderPool(capitalClient *CapitalClientAPI, minitraders ...*Minitrad
 		availablePercentage += minitrader.InvestmentPercentage
 	}
 
-	if availablePercentage == 100.0 {
-		return &MinitraderPool{}, errors.New(fmt.Sprintf("Minitraders `InvestmentPercentage` Sum Must Be 100%; Current Sum: %f", availablePercentage))
+	if availablePercentage != 100.0 {
+		return &MinitraderPool{}, errors.New(fmt.Sprintf("Minitraders InvestmentPercentage` Sum Must Be 100.0; Current Sum: %f", availablePercentage))
 	}
 
 	return pool, nil
 }
 
 func (pool *MinitraderPool) Start() {
+	var wg sync.WaitGroup
 	for _, minitrader := range pool.Minitraders {
 		minitrader.capitalClient = pool.CapitalClient
-		go minitrader.Start()
+		go minitrader.Start(&wg)
+		wg.Add(1)
 	}
 	go pool.UpdateMinitradersData(time.Second)
 	go pool.UpdateMarketStatus(time.Minute)
 	go pool.AuthenticateSession(time.Minute * 9)
+	go pool.Pulse()
+	wg.Wait()
 }
 
 func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
@@ -95,7 +100,7 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 		} else if err != nil {
 			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 		}
-		pool.updateMinitradersAmountAvailable(account.Balance.Available)
+		pool.updateMinitradersVolatileValues(account.Balance.Available)
 
 		// update minitraders candles data
 		for _, minitraders := range pool.epicTimeframeMinitraderMap {
@@ -130,14 +135,20 @@ func (pool *MinitraderPool) AuthenticateSession(sleepTime time.Duration) {
 	}
 }
 
-func (pool *MinitraderPool) updateMinitradersAmountAvailable(amountAvailable float64) {
+func (pool *MinitraderPool) Pulse() {
+	for {
+		log.Print("beat.")
+		time.Sleep(time.Second)
+	}
+}
+
+func (pool *MinitraderPool) updateMinitradersVolatileValues(amountAvailable float64) {
 	var totalPercent float64
 	for _, minitrader := range pool.Minitraders {
 		if minitrader.Status == NEW || minitrader.Status == RUNNING {
 			totalPercent += minitrader.InvestmentPercentage
 		}
 	}
-
 	for _, minitrader := range pool.Minitraders {
 		if minitrader.Status != NEW && minitrader.Status != RUNNING {
 			minitrader.volatileInvestmentPercentage = 0

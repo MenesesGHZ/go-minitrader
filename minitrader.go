@@ -3,22 +3,25 @@ package forexbot
 import (
 	"errors"
 	"log"
+	"sync"
 	"time"
 )
 
 type Minitrader struct {
 	Epic                 string
-	InvestmentPercentage float64 
 	Timeframe            Timeframe
 	Status               MinitraderStatus
 	MarketStatus         MinitraderMarketStatus
 	Strategy             Strategy
+	InvestmentPercentage float64
+	StopLossPercentage   float64
 
 	capitalClient       *CapitalClientAPI
 	candlesChannel      chan Candles // TODO: Implement "Pipeline" Pattern To Handle Larger Data Efficiently
 	activeDealReference string
 
-	volatileAmountAvailable      float64 
+	payedPrice                   float64
+	volatileAmountAvailable      float64
 	volatileInvestmentPercentage float64
 }
 
@@ -35,6 +38,7 @@ const (
 	// error statuses
 	ERROR_ON_UPDATE_CANDLES_DATA MinitraderStatus = "ERROR_ON_UPDATE_CANDLES_DATA"
 	ERROR_ON_MAKING_ORDER        MinitraderStatus = "ERROR_ON_MAKING_ORDER"
+	ERROR_ON_DELETING_ORDER      MinitraderStatus = "ERROR_ON_DELETING_ORDER"
 )
 
 type MinitraderMarketStatus string
@@ -57,26 +61,27 @@ const (
 	WEEK      Timeframe = "WEEK"
 )
 
-func NewMinitrader(epic string, investmentPercentage float64, timeframe Timeframe, strategy Strategy) *Minitrader {
+func NewMinitrader(epic string, investmentPercentage float64, stopLossPercentage float64, timeframe Timeframe, strategy Strategy) *Minitrader {
 	return &Minitrader{
-		Epic:                 epic,
-		InvestmentPercentage: investmentPercentage,
-		Timeframe:            timeframe,
-		Strategy:             strategy,
-		Status:               NEW,
-		candlesChannel:       make(chan Candles),
-		volatileInvestmentPercentage: investmentPercentage
+		Epic:                         epic,
+		InvestmentPercentage:         investmentPercentage,
+		Timeframe:                    timeframe,
+		Strategy:                     strategy,
+		Status:                       NEW,
+		StopLossPercentage:           stopLossPercentage,
+		candlesChannel:               make(chan Candles),
+		volatileInvestmentPercentage: investmentPercentage,
 	}
 }
 
-func (minitrader *Minitrader) Start() {
+func (minitrader *Minitrader) Start(waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	defer close(minitrader.candlesChannel)
 	minitrader.Status = RUNNING
 	for candles := range minitrader.candlesChannel {
 		signal, price := minitrader.Strategy(candles)
 		err := minitrader.Effect(signal, price)
 		if err != nil {
-			minitrader.Status = ERROR_ON_MAKING_ORDER
-			close(minitrader.candlesChannel)
 			log.Printf("Error On Minitrader Effect: %v", err)
 			return
 		}
@@ -88,17 +93,20 @@ func (minitrader *Minitrader) Effect(signal Signal, price float64) error {
 		return errors.New("Unable To Do Trading; Market Closed")
 	}
 
-	// make a buy/sell order and wait 3:30 minutes or less if order has been completed before wait time.
-	if minitrader.Status == RUNNING && signal == BUY {
-		minitrader.Status = BUY_ORDER_ACTIVE
-		err := minitrader.makeOrderAndWaitUntilComplete(minitrader.Epic, BUY, LIMIT, price)
+	// quick sell out
+	if minitrader.payedPrice*(100-minitrader.StopLossPercentage) > price {
+		err := minitrader.deleteOrder(minitrader.activeDealReference)
 		if err != nil {
+			minitrader.Status = ERROR_ON_DELETING_ORDER
 			return err
 		}
-	} else if minitrader.Status == HOLDING && signal == SELL {
-		minitrader.Status = SELL_ORDER_ACTIVE
-		err := minitrader.makeOrderAndWaitUntilComplete(minitrader.Epic, SELL, LIMIT, price)
+	}
+
+	// make a buy/sell order and wait 3:30 minutes or less if order has been completed before wait time.
+	if (minitrader.Status == RUNNING && signal == BUY) || (minitrader.Status == HOLDING && signal == SELL) {
+		err := minitrader.makeOrderAndWaitUntilComplete(minitrader.Epic, signal, LIMIT, price)
 		if err != nil {
+			minitrader.Status = ERROR_ON_MAKING_ORDER
 			return err
 		}
 	}
@@ -111,10 +119,13 @@ func (minitrader *Minitrader) makeOrderAndWaitUntilComplete(epic string, signal 
 	var err error
 	var dealReference string
 
-	// get amount available from preferred account or get amount from position/order confirmation
+	// update minitrader status and get amount available
+	// from preferred account or get amount from position/order confirmation
 	if signal == BUY {
-		amount := minitrader.volatileAmountAvailable // TODO; Double check if quantity good (amount)
+		minitrader.Status = BUY_ORDER_ACTIVE
+		amount = minitrader.volatileAmountAvailable // TODO; Double check if quantity good (amount)
 	} else {
+		minitrader.Status = SELL_ORDER_ACTIVE
 		amount, err = minitrader.getAmountFromPositionOrderConfirmation()
 	}
 	if err != nil {
@@ -138,18 +149,19 @@ func (minitrader *Minitrader) makeOrderAndWaitUntilComplete(epic string, signal 
 		return nil
 	}
 
-	// update minitrader status and active deal reference
+	// update minitrader status, active deal reference and payed price
 	if signal == BUY {
 		minitrader.Status = HOLDING
 		minitrader.activeDealReference = dealReference
+		minitrader.payedPrice = targetPrice
 	} else {
 		minitrader.Status = RUNNING
 		minitrader.activeDealReference = ""
+		minitrader.payedPrice = 0.0
 	}
 
 	return nil
 }
-
 
 func (minitrader *Minitrader) getAmountFromPositionOrderConfirmation() (amount float64, err error) { // TODO: Unused
 	tryCounter := 0
@@ -204,4 +216,16 @@ func (minitrader *Minitrader) waitUntilConfirmationWithRetries(dealReference str
 		return "", err
 	}
 	return orderPositionStatus, nil
+}
+
+func (minitrader *Minitrader) deleteOrder(dealReference string) error {
+	_, err := minitrader.capitalClient.DeleteWorkingOrder(dealReference)
+	if err != nil {
+		return err
+	}
+	minitrader.activeDealReference = ""
+	minitrader.Status = RUNNING
+	minitrader.payedPrice = 0.0
+
+	return nil
 }
