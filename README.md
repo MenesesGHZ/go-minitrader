@@ -52,8 +52,7 @@ func main() {
 	minitraderPool.Start()
 }
 ```
-The previous code is a main Go program that trades forex using the go-minitrader package. It starts by loading environment variables from a .env file which contains the credentials for accessing Capital.com, the main broker used by the bot.
-The program creates a new client for Capital.com using the credentials from the .env file. 
+The previous code is a main Go program that trades forex using the go-minitrader package. It establishes a new client connection to Capital.com, which serves as the designated broker for the bot's trades.
 
 Then, it sets up three different instances of the minitrader for the currency pairs `USD/JPY`, `USD/CAD`, and `USD/MXN` with the same stop loss (2%) and upperbound profit target (0.35%), but with different trade sizes 
 (25 for `USD/JPY`, 50 for `USD/MXN`, and default of 25 for `USD/CAD`) and different strategies (`GPTStrategy` for `USD/JPY`, `GPTShortTermStrategy` for `USD/CAD` and `USD/MXN`).
