@@ -8,7 +8,7 @@ import (
 
 func _TestNewPool() *MinitraderPool {
 	capClient, _ := _TestCapitalClient()
-	minitrader := NewMinitrader("USDMXN", 100, 5, MINUTE_15, GPTStrategy)
+	minitrader := NewMinitrader("USDMXN", 100, 5, 0.5, MINUTE_15, GPTStrategy)
 
 	minitraderPool, _ := NewMinitraderPool(
 		capClient,
@@ -55,8 +55,8 @@ func TestMinitradersAmount(t *testing.T) {
 	t.Run("2 Minitraders", func(t *testing.T) {
 		capClient, _ := _TestCapitalClient()
 
-		minitrader1 := NewMinitrader("USDMXN", 50, 5, MINUTE_15, GPTStrategy)
-		minitrader2 := NewMinitrader("USDCAD", 50, 5, MINUTE_15, GPTStrategy)
+		minitrader1 := NewMinitrader("USDMXN", 50, 5, 0.25, MINUTE_15, GPTStrategy)
+		minitrader2 := NewMinitrader("USDCAD", 50, 5, 0.25, MINUTE_15, GPTStrategy)
 		minitraderPool, _ := NewMinitraderPool(
 			capClient,
 			minitrader1,
@@ -88,9 +88,9 @@ func TestMinitradersAmount(t *testing.T) {
 
 	t.Run("3 Minitraders", func(t *testing.T) {
 		capClient, _ := _TestCapitalClient()
-		minitrader1 := NewMinitrader("USDMXN", 10, 3, MINUTE_15, GPTStrategy)
-		minitrader2 := NewMinitrader("USDCAD", 30, 5, MINUTE_30, GPTStrategy)
-		minitrader3 := NewMinitrader("USDJPN", 60, 5, MINUTE_5, GPTStrategy)
+		minitrader1 := NewMinitrader("USDMXN", 10, 3, 0.25, MINUTE_15, GPTStrategy)
+		minitrader2 := NewMinitrader("USDCAD", 30, 5, 0.25, MINUTE_30, GPTStrategy)
+		minitrader3 := NewMinitrader("USDJPN", 60, 5, 0.25, MINUTE_5, GPTStrategy)
 		minitraderPool, _ := NewMinitraderPool(capClient, minitrader1, minitrader2, minitrader3)
 
 		tests := []struct {

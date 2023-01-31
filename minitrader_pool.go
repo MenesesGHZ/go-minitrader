@@ -74,12 +74,10 @@ func (pool *MinitraderPool) Start() {
 func (pool *MinitraderPool) UpdateMarketStatus(sleepTime time.Duration) {
 	for {
 		marketsDetailsResponse, err := pool.CapitalClient.GetMarketsDetails(pool.epics)
-		if _, ok := err.(*CapitalClientUnathenticated); ok {
-			// sleep and retry. AuthenticateSession goroutine should handle this
+		if err != nil {
+			// sleep and retry. AuthenticateSession goroutine should handle this; TODO: Improve error handling
 			time.Sleep(sleepTime)
 			continue
-		} else if err != nil {
-			log.Fatalf("Unexpected Error: %v", err)
 		}
 		for _, detail := range marketsDetailsResponse.MarketDetails {
 			marketStatus := MinitraderMarketStatus(detail.Snapshot.MarketStatus)
@@ -95,12 +93,10 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 	for {
 		// update minitraderes amountAvailable to invest
 		account, err := pool.CapitalClient.GetPreferredAccount()
-		if _, ok := err.(*CapitalClientUnathenticated); ok {
-			// sleep and retry. AuthenticateSession goroutine should handle this
+		if err != nil {
+			// sleep and retry. AuthenticateSession goroutine should handle this; TODO: Improve error handling
 			time.Sleep(sleepTime)
 			continue
-		} else if err != nil {
-			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 		}
 		pool.updateMinitradersVolatileValues(account.Balance.Available)
 
@@ -108,11 +104,9 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 		for _, minitraders := range pool.epicTimeframeMinitraderMap {
 			epic, timeframe := minitraders[0].Epic, minitraders[0].Timeframe
 			pricesResponse, err := pool.CapitalClient.GetHistoricalPrices(epic, timeframe, 200)
-			if _, ok := err.(*CapitalClientUnathenticated); ok {
-				// break loop, then sleep and retry. AuthenticateSession goroutine should handle this
+			if err != nil {
+				// sleep and retry. AuthenticateSession goroutine should handle this; TODO: Improve error handling
 				break
-			} else if err != nil {
-				log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 			}
 
 			var candles Candles
