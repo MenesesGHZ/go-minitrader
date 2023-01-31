@@ -22,13 +22,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Trade the USD/JPY currency pair with a 2% stop loss and a 0.35% upperbound profit target using 15-minute intervals and the GPTStrategy.
 	minitraderUSDJPY := gominitrader.NewMinitrader(
-		"USDJPY", 50, 5, gominitrader.MINUTE_15, gominitrader.GPTStrategy,
-	)
-	minitraderUSDCAD := gominitrader.NewMinitrader(
-		"USDCAD", 50, 5, gominitrader.MINUTE_15, gominitrader.GPTStrategy,
+		"USDJPY", 25, 2, 0.35, gominitrader.MINUTE_15, gominitrader.GPTStrategy,
 	)
 
-	minitraderPool, _ := gominitrader.NewMinitraderPool(capitalClient, minitraderUSDJPY, minitraderUSDCAD)
+	// Trade the USD/CAD currency pair with a 2% stop loss and a 0.35% upperbound profit target using 15-minute intervals and the GPTStrategy.
+	minitraderUSDCAD := gominitrader.NewMinitrader(
+		"USDCAD", 25, 2, 0.35, gominitrader.MINUTE_15, gominitrader.GPTShortTermStrategy,
+	)
+
+	// Trade the USD/MXN currency pair with a 2% stop loss and a 0.35% upperbound profit target using 15-minute intervals and the GPTStrategy.
+	minitraderUSDMXN := gominitrader.NewMinitrader(
+		"USDMXN", 50, 2, 0.35, gominitrader.MINUTE_15, gominitrader.GPTShortTermStrategy,
+	)
+
+	minitraderPool, _ := gominitrader.NewMinitraderPool(capitalClient, minitraderUSDJPY, minitraderUSDCAD, minitraderUSDMXN)
 	minitraderPool.Start()
 }
