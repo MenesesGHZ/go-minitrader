@@ -1,4 +1,4 @@
-package forexbot
+package gominitrader
 
 type NewSessionBody struct {
 	Identifier        string `json:"identifier"`

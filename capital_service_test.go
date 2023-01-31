@@ -1,4 +1,4 @@
-package forexbot
+package gominitrader
 
 import (
 	"os"

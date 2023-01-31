@@ -27,7 +27,7 @@ Also there was more converstion before this one, related to which is the best ma
 what are good strategies for do so.
 */
 
-package forexbot
+package gominitrader
 
 import (
 	"math"
