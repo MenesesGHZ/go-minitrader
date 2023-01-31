@@ -15,6 +15,7 @@ type Minitrader struct {
 	Strategy             Strategy
 	InvestmentPercentage float64
 	StopLossPercentage   float64
+	ProfitPercentage     float64
 
 	capitalClient       *CapitalClientAPI
 	candlesChannel      chan Candles // TODO: Implement "Pipeline" Pattern To Handle Larger Data Efficiently
@@ -72,7 +73,7 @@ var TimeframeMinuteMap = map[Timeframe]int{
 	WEEK:      10080,
 }
 
-func NewMinitrader(epic string, investmentPercentage float64, stopLossPercentage float64, timeframe Timeframe, strategy Strategy) *Minitrader {
+func NewMinitrader(epic string, investmentPercentage float64, stopLossPercentage float64, profitPercentage float64, timeframe Timeframe, strategy Strategy) *Minitrader {
 	return &Minitrader{
 		Epic:                         epic,
 		InvestmentPercentage:         investmentPercentage,
@@ -80,6 +81,7 @@ func NewMinitrader(epic string, investmentPercentage float64, stopLossPercentage
 		Strategy:                     strategy,
 		Status:                       NEW,
 		StopLossPercentage:           stopLossPercentage,
+		ProfitPercentage:             profitPercentage,
 		candlesChannel:               make(chan Candles),
 		volatileInvestmentPercentage: investmentPercentage,
 	}
@@ -92,6 +94,7 @@ func (minitrader *Minitrader) Start(waitGroup *sync.WaitGroup) {
 	for candles := range minitrader.candlesChannel {
 		signal, price := minitrader.Strategy(candles)
 		err := minitrader.Effect(signal, price)
+		log.Printf("Epic: %s - Timeframe: %v - Signal: %v - Price: %v", minitrader.Epic, minitrader.Timeframe, signal, price)
 		if err != nil {
 			log.Printf("Error On Minitrader Effect: %v", err)
 			return
@@ -100,14 +103,13 @@ func (minitrader *Minitrader) Start(waitGroup *sync.WaitGroup) {
 }
 
 func (minitrader *Minitrader) Effect(signal Signal, price float64) error {
-	log.Printf("Epic: %s - Signal: %v - Price: %v", minitrader.Epic, signal, price)
-
 	if minitrader.MarketStatus == CLOSED {
 		return errors.New("Unable To Do Trading; Market Closed")
 	}
 
-	// quick sell out
-	if minitrader.payedPrice*(100-minitrader.StopLossPercentage) > price {
+	// quick sell out with looses
+	lowerBoundPrice := minitrader.payedPrice * (1 + (100-minitrader.StopLossPercentage)/100)
+	if (minitrader.Status == HOLDING) && (lowerBoundPrice >= price) {
 		err := minitrader.deleteOrder(minitrader.activeDealReference)
 		if err != nil {
 			minitrader.Status = ERROR_ON_DELETING_ORDER
@@ -115,8 +117,18 @@ func (minitrader *Minitrader) Effect(signal Signal, price float64) error {
 		}
 	}
 
+	// sell out with profit
+	upperBoundPrice := minitrader.payedPrice * (1 + (100+minitrader.ProfitPercentage)/100)
+	if (minitrader.Status == HOLDING) && (upperBoundPrice <= price) {
+		err := minitrader.makeOrderAndWaitUntilComplete(minitrader.Epic, SELL, LIMIT, price)
+		if err != nil {
+			minitrader.Status = ERROR_ON_MAKING_ORDER
+			return err
+		}
+	}
+
 	// make a buy/sell order and wait 3:30 minutes or less if order has been completed before wait time.
-	if (minitrader.Status == RUNNING && signal == BUY) || (minitrader.Status == HOLDING && signal == SELL) {
+	if minitrader.Status == RUNNING && signal == BUY { // || (minitrader.Status == HOLDING && signal == SELL) {
 		err := minitrader.makeOrderAndWaitUntilComplete(minitrader.Epic, signal, LIMIT, price)
 		if err != nil {
 			minitrader.Status = ERROR_ON_MAKING_ORDER
