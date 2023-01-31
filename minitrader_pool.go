@@ -95,8 +95,9 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 		// update minitraderes amountAvailable to invest
 		account, err := pool.CapitalClient.GetPreferredAccount()
 		if _, ok := err.(*CapitalClientUnathenticated); ok {
-			// break loop and retry after sleeptime ends. AuthenticateSession goroutine should handle this
-			break
+			// sleep and retry. AuthenticateSession goroutine should handle this
+			time.Sleep(sleepTime)
+			continue
 		} else if err != nil {
 			log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling
 		}
@@ -107,7 +108,7 @@ func (pool *MinitraderPool) UpdateMinitradersData(sleepTime time.Duration) {
 			epic, timeframe := minitraders[0].Epic, minitraders[0].Timeframe
 			pricesResponse, err := pool.CapitalClient.GetHistoricalPrices(epic, timeframe)
 			if _, ok := err.(*CapitalClientUnathenticated); ok {
-				// break loop and retry after sleeptime ends. AuthenticateSession goroutine should handle this
+				// break loop, then sleep and retry. AuthenticateSession goroutine should handle this
 				break
 			} else if err != nil {
 				log.Fatalf("Unexpected Error: %v", err) // TODO: Improve error handling

@@ -8,7 +8,7 @@ import (
 
 func _TestNewPool() *MinitraderPool {
 	capClient, _ := _TestCapitalClient()
-	minitrader := NewMinitrader("USDMXN", 50, 5, MINUTE_15, GPTStrategy)
+	minitrader := NewMinitrader("USDMXN", 100, 5, MINUTE_15, GPTStrategy)
 
 	minitraderPool, _ := NewMinitraderPool(
 		capClient,
