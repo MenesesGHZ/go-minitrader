@@ -20,11 +20,13 @@ which could result in better performance. In addition to that, the use of ATR as
 
  -----------------------
 
-As a side note, originally the code generated was in python, then I asked to translat it to a real time implementation
+As a side note, originally the code generated was in python, then I asked to translate it to a real time implementation
 using golang. It came with some errors related to `index out of range` mainly. But ChatGPT was able to fix it himself.
 
 Also there was more converstion before this one, related to which is the best market to do intrady and
 what are good strategies for do so.
+
+Ideally this strategy was for a 15 minutes timeframe.
 */
 
 package gominitrader
